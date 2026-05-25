@@ -117,10 +117,10 @@ export default async function Home() {
         <section className="mx-auto grid max-w-7xl gap-4 px-6 md:grid-cols-4">
           {[
             [
-              "📜",
-              "Announcements",
-              "Guild news, raid times, and officer messages.",
-              "View News",
+              "⚔️",
+              "Roster",
+              "Manage raid groups, classes, raid composition, and member assignments.",
+              "View Roster",
             ],
             [
               "🏆",
@@ -135,7 +135,7 @@ export default async function Home() {
               "Check Gear",
             ],
             [
-              "⚔️",
+              "📅",
               "Raid Schedule",
               "See upcoming raids and events.",
               "View Schedule",
@@ -153,9 +153,16 @@ export default async function Home() {
 
               <p className="mt-3 min-h-20 text-[#d8c39a]">{text}</p>
 
-              <button className="mt-5 w-full border border-[#9b6a2f] bg-[#141414] py-3 uppercase text-[#f4d58a]">
+              <a
+                href={
+                  title === "Roster"
+                    ? "/roster"
+                    : "#"
+                }
+                className="mt-5 block w-full border border-[#9b6a2f] bg-[#141414] py-3 uppercase text-[#f4d58a]"
+              >
                 {button}
-              </button>
+              </a>
             </div>
           ))}
         </section>
