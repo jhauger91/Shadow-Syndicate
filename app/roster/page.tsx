@@ -146,10 +146,10 @@ export default function RosterPage() {
     }
   }
 
-  function onDropRaider(event: React.DragEvent<HTMLDivElement>, groupNumber: number) {
+    function onDropRaider(event: React.DragEvent<HTMLElement>, groupNumber: number) {
     const id = Number(event.dataTransfer.getData("raiderId"));
     if (id) moveRaider(id, groupNumber);
-  }
+    }
 
   return (
     <main className="min-h-screen bg-black text-[#d8c39a]">
