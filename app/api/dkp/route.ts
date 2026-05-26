@@ -17,13 +17,14 @@ export async function GET() {
             'date', h.event_date,
             'event', CASE
               WHEN h.event_type = 'Attendance'
-                THEN h.raid_name || ' - Attendance'
+              THEN h.raid_name || ' - Attendance'
               WHEN h.event_type = 'Progression Kill'
-                THEN h.raid_name || ' - Progression Kill (' || COALESCE(h.boss_name, 'Boss') || ')'
+              THEN h.raid_name || ' - Progression Kill (' || COALESCE(h.boss_name, 'Boss') || ')'
               WHEN h.event_type = 'Loot Awarded'
-                THEN 'Loot Awarded (Negative)'
+              THEN 'Loot Awarded (Negative)'
               ELSE h.event_type
             END,
+            'notes', h.notes,
             'dkp', h.dkp
           )
           ORDER BY h.event_date DESC, h.id DESC
@@ -42,14 +43,24 @@ export async function GET() {
 export async function POST(request: Request) {
   const body = await request.json();
 
-  const rosterId = Number(body.rosterId);
+  const rosterIds = Array.isArray(body.rosterIds)
+    ? body.rosterIds.map(Number).filter(Boolean)
+    : [Number(body.rosterId)].filter(Boolean);
+
   const raidName = body.raidName?.trim();
   const eventDate = body.eventDate;
   const eventType = body.eventType?.trim();
   const bossName = body.bossName?.trim() || null;
+  const notes = body.notes?.trim() || null;
   const dkp = Number(body.dkp);
 
-  if (!rosterId || !raidName || !eventDate || !eventType || Number.isNaN(dkp)) {
+  if (
+    rosterIds.length === 0 ||
+    !raidName ||
+    !eventDate ||
+    !eventType ||
+    Number.isNaN(dkp)
+  ) {
     return Response.json(
       { error: "Missing required DKP fields." },
       { status: 400 }
@@ -63,18 +74,43 @@ export async function POST(request: Request) {
       event_date,
       event_type,
       boss_name,
+      notes,
       dkp
     )
-    VALUES (
-      ${rosterId},
+    SELECT
+      roster_id,
       ${raidName},
       ${eventDate},
       ${eventType},
       ${bossName},
+      ${notes},
       ${dkp}
-    )
+    FROM unnest(${rosterIds}::int[]) AS roster_id
     RETURNING id
   `;
 
-  return Response.json(result[0]);
+  return Response.json({
+    success: true,
+    inserted: result.length,
+    ids: result.map((row) => row.id),
+  });
+}
+
+export async function DELETE(request: Request) {
+  const { searchParams } = new URL(request.url);
+  const id = Number(searchParams.get("id"));
+
+  if (!id) {
+    return Response.json(
+      { error: "Missing DKP history id." },
+      { status: 400 }
+    );
+  }
+
+  await sql`
+    DELETE FROM dkp_history
+    WHERE id = ${id}
+  `;
+
+  return Response.json({ success: true });
 }
