@@ -95,12 +95,16 @@ export default async function Home() {
             </div>
 
             <nav className="hidden gap-10 text-sm font-semibold uppercase tracking-widest text-[#e4c67a] md:flex">
-              <a className="border-b border-[#d69a3a] pb-2" href="#">
+              <a className="border-b border-[#d69a3a] pb-2" href="/">
                 Home
               </a>
-              <a href="#">DKP</a>
+
+              <a href="/dkp">DKP</a>
+
               <a href="#">Gear Check</a>
-              <a href="#">Roster</a>
+
+              <a href="/roster">Roster</a>
+
               <a href="#">Events</a>
             </nav>
           </div>
@@ -157,6 +161,8 @@ export default async function Home() {
                 href={
                   title === "Roster"
                     ? "/roster"
+                    : title === "DKP Tracker"
+                    ? "/dkp"
                     : "#"
                 }
                 className="mt-5 block w-full border border-[#9b6a2f] bg-[#141414] py-3 uppercase text-[#f4d58a]"
@@ -219,6 +225,13 @@ export default async function Home() {
                 ))}
               </tbody>
             </table>
+
+            <a
+              href="/dkp"
+              className="block border-t border-[#6f542c] bg-[#111820] py-4 text-center text-sm uppercase tracking-widest text-[#d69a3a] transition hover:bg-[#162235] hover:text-[#f4d58a]"
+            >
+              Open Full DKP Tracker
+            </a>
           </div>
         </section>
 

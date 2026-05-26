@@ -13,11 +13,32 @@ type Raider = {
 };
 
 const classes = [
-  "Guardian", "Berserker", "Paladin", "Shadowknight", "Monk", "Bruiser",
-  "Templar", "Inquisitor", "Warden", "Fury", "Mystic", "Defiler",
-  "Dirge", "Troubador", "Coercer", "Illusionist",
-  "Assassin", "Ranger", "Brigand", "Swashbuckler",
-  "Wizard", "Warlock", "Conjuror", "Necromancer", "Beastlord", "Channeler",
+  "Assassin",
+  "Beastlord",
+  "Berserker",
+  "Brigand",
+  "Bruiser",
+  "Channeler",
+  "Coercer",
+  "Conjuror",
+  "Defiler",
+  "Dirge",
+  "Fury",
+  "Guardian",
+  "Illusionist",
+  "Inquisitor",
+  "Monk",
+  "Mystic",
+  "Necromancer",
+  "Paladin",
+  "Ranger",
+  "Shadowknight",
+  "Swashbuckler",
+  "Templar",
+  "Troubador",
+  "Warlock",
+  "Warden",
+  "Wizard",
 ];
 
 const typeStyles: Record<RoleType, string> = {
