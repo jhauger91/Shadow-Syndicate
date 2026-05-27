@@ -25,6 +25,7 @@ export async function GET() {
               ELSE h.event_type
             END,
             'notes', h.notes,
+            'loot_item', h.loot_item,
             'dkp', h.dkp
           )
           ORDER BY h.event_date DESC, h.id DESC
@@ -53,6 +54,7 @@ export async function POST(request: Request) {
   const bossName = body.bossName?.trim() || null;
   const notes = body.notes?.trim() || null;
   const dkp = Number(body.dkp);
+  const lootItem = body.lootItem || null;
 
   if (
     rosterIds.length === 0 ||
@@ -75,6 +77,7 @@ export async function POST(request: Request) {
       event_type,
       boss_name,
       notes,
+      loot_item,
       dkp
     )
     SELECT
@@ -84,6 +87,7 @@ export async function POST(request: Request) {
       ${eventType},
       ${bossName},
       ${notes},
+      ${lootItem ? JSON.stringify(lootItem) : null}::jsonb,
       ${dkp}
     FROM unnest(${rosterIds}::int[]) AS roster_id
     RETURNING id

@@ -1,7 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Link from "next/link";
+import Eq2ItemTooltip from "@/components/Eq2ItemTooltip";
+import React, { useEffect, useState } from "react";
+
+type LootItem = {
+  exists: boolean;
+  name: string;
+  title: string;
+  url: string;
+  rarity?: string;
+  flags?: string[];
+  level?: string;
+  tier?: string;
+  itemType?: string;
+  weaponType?: string;
+  stats?: string[];
+  raw?: string;
+};
 
 type DkpHistory = {
   id: number;
@@ -11,6 +27,7 @@ type DkpHistory = {
   date: string;
   event: string;
   notes: string | null;
+  loot_item: LootItem | null;
   dkp: number;
 };
 
@@ -30,23 +47,23 @@ export default function DkpPage() {
 
   const [blanketMode, setBlanketMode] = useState(false);
   const [selectedRosterIds, setSelectedRosterIds] = useState<number[]>([]);
-
   const [rosterId, setRosterId] = useState("");
+
   const [raidName, setRaidName] = useState("");
-  const [eventDate, setEventDate] = useState(
-    new Date().toISOString().slice(0, 10)
-  );
+  const [eventDate, setEventDate] = useState(new Date().toISOString().slice(0, 10));
   const [eventType, setEventType] = useState("Attendance");
   const [bossName, setBossName] = useState("");
   const [notes, setNotes] = useState("");
   const [dkp, setDkp] = useState("");
 
+  const [lootItemName, setLootItemName] = useState("");
+  const [lootItem, setLootItem] = useState<LootItem | null>(null);
+  const [lootStatus, setLootStatus] = useState("");
+
   async function loadDkp() {
     setLoading(true);
-
     const response = await fetch("/api/dkp");
     const data = await response.json();
-
     setCharacters(data);
     setLoading(false);
   }
@@ -71,6 +88,27 @@ export default function DkpPage() {
     setSelectedRosterIds([]);
   }
 
+  async function checkLootItem(name: string) {
+    setLootItem(null);
+    setLootStatus("");
+
+    if (!name.trim()) return null;
+
+    setLootStatus("Checking EQ2 Fandom...");
+
+    const response = await fetch(`/api/eq2/items?q=${encodeURIComponent(name)}`);
+    const data = await response.json();
+
+    if (data.exists) {
+      setLootItem(data);
+      setLootStatus(`Item found: ${data.title}`);
+      return data as LootItem;
+    }
+
+    setLootStatus("No matching EQ2 Fandom item found.");
+    return null;
+  }
+
   async function addEvent() {
     if (
       (!blanketMode && !rosterId) ||
@@ -85,6 +123,20 @@ export default function DkpPage() {
 
     setSaving(true);
 
+    let itemToSave = lootItem;
+
+    if (lootItemName.trim() && !itemToSave) {
+      const checkedItem = await checkLootItem(lootItemName);
+
+      if (!checkedItem) {
+        setLootStatus("No matching EQ2 Fandom item found. Event not saved.");
+        setSaving(false);
+        return;
+      }
+
+      itemToSave = checkedItem;
+    }
+
     const response = await fetch("/api/dkp", {
       method: "POST",
       headers: {
@@ -98,6 +150,7 @@ export default function DkpPage() {
         eventType,
         bossName,
         notes,
+        lootItem: itemToSave,
         dkp: Number(dkp),
       }),
     });
@@ -107,8 +160,10 @@ export default function DkpPage() {
       setBossName("");
       setNotes("");
       setDkp("");
+      setLootItemName("");
+      setLootItem(null);
+      setLootStatus("");
       setSelectedRosterIds([]);
-
       await loadDkp();
     }
 
@@ -129,61 +184,48 @@ export default function DkpPage() {
 
   return (
     <main className="min-h-screen bg-[#050505] text-[#f4d58a]">
-      <header className="border-b border-[#9b6a2f] bg-[#0b0b0b] px-8 py-5">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <Link
-            href="/"
-            className="text-xl font-black uppercase tracking-[0.35em] text-[#f4d58a]"
-          >
+      <nav className="border-b border-[#3a100b] bg-black px-8 py-4">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <div className="text-xl font-bold tracking-widest text-[#d4af37]">
             Shadow Syndicate
-          </Link>
+          </div>
 
-          <nav className="flex gap-6 text-sm font-bold uppercase tracking-widest text-[#c9a45c]">
+          <div className="flex gap-6 text-sm uppercase tracking-widest">
             <Link href="/">Home</Link>
-
-            <Link href="/dkp" className="text-[#f4d58a]">
-              DKP
-            </Link>
-
-            <span>Gear Check</span>
-
+            <Link href="/dkp">DKP</Link>
+            <Link href="/gear">Gear Check</Link>
             <Link href="/roster">Roster</Link>
-
-            <span>Events</span>
-          </nav>
+            <Link href="/events">Events</Link>
+          </div>
         </div>
-      </header>
+      </nav>
 
-      <section className="mx-auto max-w-7xl px-8 py-12">
-        <p className="mb-2 text-sm uppercase tracking-[0.35em] text-[#c9a45c]">
+      <section className="mx-auto max-w-6xl px-8 py-10">
+        <p className="mb-2 text-sm uppercase tracking-[0.4em] text-[#9b6a2f]">
           Shadow Syndicate Ledger
         </p>
 
-        <h1 className="mb-4 text-5xl font-black uppercase tracking-widest">
-          DKP Tracker
-        </h1>
+        <h1 className="mb-4 text-4xl font-bold text-[#d4af37]">DKP Tracker</h1>
 
-        <p className="mb-10 max-w-3xl text-[#d6c088]">
+        <p className="mb-10 text-[#c8b88a]">
           Add raid attendance, progression kills, and loot deductions.
         </p>
 
-        <section className="mb-12 rounded border border-[#9b6a2f] bg-[#111] p-6">
-          <h2 className="mb-5 text-2xl font-black uppercase tracking-widest">
+        <section className="mb-10 rounded border border-[#3a100b] bg-[#0b0b0b] p-6">
+          <h2 className="mb-4 text-2xl font-bold text-[#d4af37]">
             Add DKP Event
           </h2>
 
-          <div className="mb-6">
-            <label className="flex items-center gap-3 text-sm font-bold uppercase tracking-widest text-[#c9a45c]">
-              <input
-                type="checkbox"
-                checked={blanketMode}
-                onChange={(event) => setBlanketMode(event.target.checked)}
-              />
-              Blanket Raid DKP Assignment
-            </label>
-          </div>
+          <label className="mb-4 flex items-center gap-2 text-sm text-[#c8b88a]">
+            <input
+              type="checkbox"
+              checked={blanketMode}
+              onChange={(event) => setBlanketMode(event.target.checked)}
+            />
+            Blanket Raid DKP Assignment
+          </label>
 
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2">
             {!blanketMode ? (
               <select
                 value={rosterId}
@@ -191,7 +233,6 @@ export default function DkpPage() {
                 className="border border-[#9b6a2f] bg-black px-3 py-2 text-sm text-[#f4d58a]"
               >
                 <option value="">Character</option>
-
                 {characters.map((character) => (
                   <option key={character.id} value={character.id}>
                     {character.character_name} - {character.class_name}
@@ -199,43 +240,37 @@ export default function DkpPage() {
                 ))}
               </select>
             ) : (
-              <div className="md:col-span-4 rounded border border-[#9b6a2f] bg-black p-4">
-                <div className="mb-4 flex flex-wrap gap-3">
+              <div className="md:col-span-2 rounded border border-[#3a100b] bg-black p-4">
+                <div className="mb-3 flex gap-3">
                   <button
                     onClick={selectAllRoster}
-                    className="border border-[#9b6a2f] bg-[#141414] px-3 py-2 text-xs font-bold uppercase tracking-widest text-[#f4d58a] hover:bg-[#3a100b]"
+                    className="border border-[#9b6a2f] px-3 py-1 text-xs font-bold uppercase"
                   >
                     Select All
                   </button>
 
                   <button
                     onClick={clearRosterSelection}
-                    className="border border-[#9b6a2f] bg-[#141414] px-3 py-2 text-xs font-bold uppercase tracking-widest text-[#f4d58a] hover:bg-[#3a100b]"
+                    className="border border-[#9b6a2f] px-3 py-1 text-xs font-bold uppercase"
                   >
                     Clear
                   </button>
 
-                  <div className="flex items-center text-sm text-[#c9a45c]">
+                  <span className="text-sm text-[#c8b88a]">
                     {selectedRosterIds.length} Selected
-                  </div>
+                  </span>
                 </div>
 
-                <div className="grid gap-2 md:grid-cols-4">
+                <div className="grid gap-2 md:grid-cols-3">
                   {characters.map((character) => (
-                    <label
-                      key={character.id}
-                      className="flex items-center gap-2 text-sm text-[#f4d58a]"
-                    >
+                    <label key={character.id} className="text-sm text-[#c8b88a]">
                       <input
                         type="checkbox"
                         checked={selectedRosterIds.includes(character.id)}
-                        onChange={() =>
-                          toggleRosterSelection(character.id)
-                        }
+                        onChange={() => toggleRosterSelection(character.id)}
+                        className="mr-2"
                       />
-
-                      {character.character_name} -{" "}
-                      {character.class_name}
+                      {character.character_name} - {character.class_name}
                     </label>
                   ))}
                 </div>
@@ -274,6 +309,38 @@ export default function DkpPage() {
             />
 
             <input
+              value={lootItemName}
+              onChange={(event) => {
+                setLootItemName(event.target.value);
+                setLootItem(null);
+                setLootStatus("");
+              }}
+              onBlur={() => checkLootItem(lootItemName)}
+              placeholder="Loot Item Name"
+              className="border border-[#9b6a2f] bg-black px-3 py-2 text-sm text-[#f4d58a]"
+            />
+
+            <button
+              type="button"
+              onClick={() => checkLootItem(lootItemName)}
+              className="border border-[#9b6a2f] bg-[#141414] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#f4d58a] hover:bg-[#3a100b]"
+            >
+              Check Loot Item
+            </button>
+
+            {lootStatus && (
+              <div className="md:col-span-2 text-xs text-[#c8b88a]">
+                {lootStatus}
+              </div>
+            )}
+
+            {lootItem && (
+              <div className="md:col-span-2 rounded border border-[#9b6a2f] bg-black p-3 text-sm">
+                Verified loot item: <Eq2ItemTooltip item={lootItem} />
+              </div>
+            )}
+
+            <input
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
               placeholder="Notes"
@@ -281,163 +348,159 @@ export default function DkpPage() {
             />
 
             <input
-              type="number"
               value={dkp}
               onChange={(event) => setDkp(event.target.value)}
               placeholder="DKP"
               className="border border-[#9b6a2f] bg-black px-3 py-2 text-sm text-[#f4d58a]"
             />
-
-            <button
-              onClick={addEvent}
-              disabled={saving}
-              className="border border-[#9b6a2f] bg-[#3a100b] px-4 py-2 text-sm font-black uppercase tracking-widest text-[#f4d58a] hover:bg-[#5a1a10] disabled:opacity-50"
-            >
-              {saving ? "Saving..." : "Add Event"}
-            </button>
           </div>
+
+          <button
+            onClick={addEvent}
+            disabled={saving}
+            className="mt-4 border border-[#9b6a2f] bg-[#141414] px-6 py-2 text-xs font-bold uppercase tracking-widest text-[#f4d58a] hover:bg-[#3a100b]"
+          >
+            {saving ? "Saving..." : "Add Event"}
+          </button>
         </section>
 
         <section>
-          <h2 className="mb-5 text-2xl font-black uppercase tracking-widest">
+          <h2 className="mb-4 text-2xl font-bold text-[#d4af37]">
             Guild DKP Standings
           </h2>
 
           {loading ? (
             <p>Loading DKP ledger...</p>
           ) : (
-            <div className="overflow-hidden rounded border border-[#9b6a2f]">
-              <table className="w-full border-collapse text-left text-sm">
-                <thead className="bg-[#1a1a1a] uppercase tracking-widest text-[#c9a45c]">
-                  <tr>
-                    <th className="p-4">Rank</th>
-                    <th className="p-4">Character</th>
-                    <th className="p-4">Class</th>
-                    <th className="p-4">DKP</th>
-                    <th className="p-4">History</th>
-                  </tr>
-                </thead>
+            <table className="w-full border-collapse border border-[#3a100b] text-sm">
+              <thead>
+                <tr className="bg-[#141414] text-left text-[#d4af37]">
+                  <th className="border border-[#3a100b] p-3">Rank</th>
+                  <th className="border border-[#3a100b] p-3">Character</th>
+                  <th className="border border-[#3a100b] p-3">Class</th>
+                  <th className="border border-[#3a100b] p-3">DKP</th>
+                  <th className="border border-[#3a100b] p-3">History</th>
+                </tr>
+              </thead>
 
-                <tbody>
-                  {characters.map((character, index) => {
-                    const isOpen = openCharacterId === character.id;
+              <tbody>
+                {characters.map((character, index) => {
+                  const isOpen = openCharacterId === character.id;
 
-                    return (
-                      <>
-                        <tr
-                          key={character.id}
-                          className="border-t border-[#33210d] bg-[#0b0b0b]"
-                        >
-                          <td className="p-4">#{index + 1}</td>
+                  return (
+                    <React.Fragment key={character.id}>
+                      <tr>
+                        <td className="border border-[#3a100b] p-3">
+                          #{index + 1}
+                        </td>
+                        <td className="border border-[#3a100b] p-3">
+                          {character.character_name}
+                        </td>
+                        <td className="border border-[#3a100b] p-3">
+                          {character.class_name}
+                        </td>
+                        <td className="border border-[#3a100b] p-3 font-bold">
+                          {character.dkp}
+                        </td>
+                        <td className="border border-[#3a100b] p-3">
+                          <button
+                            onClick={() =>
+                              setOpenCharacterId(isOpen ? null : character.id)
+                            }
+                            className="border border-[#9b6a2f] bg-[#141414] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#f4d58a] hover:bg-[#3a100b]"
+                          >
+                            {isOpen ? "Close" : "View"}
+                          </button>
+                        </td>
+                      </tr>
 
-                          <td className="p-4 font-bold">
-                            {character.character_name}
-                          </td>
+                      {isOpen && (
+                        <tr>
+                          <td colSpan={5} className="border border-[#3a100b] p-4">
+                            {character.history.length === 0 ? (
+                              <p>No DKP history yet.</p>
+                            ) : (
+                              <table className="w-full border-collapse text-xs">
+                                <thead>
+                                  <tr className="text-left text-[#d4af37]">
+                                    <th className="border border-[#3a100b] p-2">
+                                      Character
+                                    </th>
+                                    <th className="border border-[#3a100b] p-2">
+                                      Class
+                                    </th>
+                                    <th className="border border-[#3a100b] p-2">
+                                      Raid
+                                    </th>
+                                    <th className="border border-[#3a100b] p-2">
+                                      Date
+                                    </th>
+                                    <th className="border border-[#3a100b] p-2">
+                                      Event
+                                    </th>
+                                    <th className="border border-[#3a100b] p-2">
+                                      Notes / Loot
+                                    </th>
+                                    <th className="border border-[#3a100b] p-2">
+                                      DKP
+                                    </th>
+                                    <th className="border border-[#3a100b] p-2">
+                                      Actions
+                                    </th>
+                                  </tr>
+                                </thead>
 
-                          <td className="p-4">
-                            {character.class_name}
-                          </td>
-
-                          <td className="p-4 font-black">
-                            {character.dkp}
-                          </td>
-
-                          <td className="p-4">
-                            <button
-                              onClick={() =>
-                                setOpenCharacterId(
-                                  isOpen ? null : character.id
-                                )
-                              }
-                              className="border border-[#9b6a2f] bg-[#141414] px-4 py-2 text-xs font-bold uppercase tracking-widest text-[#f4d58a] hover:bg-[#3a100b]"
-                            >
-                              {isOpen ? "Close" : "View"}
-                            </button>
+                                <tbody>
+                                  {character.history.map((entry) => (
+                                    <tr key={entry.id}>
+                                      <td className="border border-[#3a100b] p-2">
+                                        {entry.character_name}
+                                      </td>
+                                      <td className="border border-[#3a100b] p-2">
+                                        {entry.class_name}
+                                      </td>
+                                      <td className="border border-[#3a100b] p-2">
+                                        {entry.raid}
+                                      </td>
+                                      <td className="border border-[#3a100b] p-2">
+                                        {new Date(entry.date).toLocaleDateString()}
+                                      </td>
+                                      <td className="border border-[#3a100b] p-2">
+                                        {entry.event}
+                                      </td>
+                                      <td className="border border-[#3a100b] p-2">
+                                        {entry.loot_item ? (
+                                          <Eq2ItemTooltip item={entry.loot_item} />
+                                        ) : (
+                                          entry.notes || "-"
+                                        )}
+                                      </td>
+                                      <td className="border border-[#3a100b] p-2 font-bold">
+                                        {entry.dkp > 0
+                                          ? `+${entry.dkp}`
+                                          : entry.dkp}
+                                      </td>
+                                      <td className="border border-[#3a100b] p-2">
+                                        <button
+                                          onClick={() => deleteEvent(entry.id)}
+                                          className="border border-red-800 px-3 py-1 text-xs font-bold uppercase text-red-300 hover:bg-red-950"
+                                        >
+                                          Delete
+                                        </button>
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            )}
                           </td>
                         </tr>
-
-                        {isOpen && (
-                          <tr className="border-t border-[#33210d] bg-black">
-                            <td colSpan={5} className="p-4">
-                              {character.history.length === 0 ? (
-                                <p>No DKP history yet.</p>
-                              ) : (
-                                <table className="w-full border-collapse text-left text-xs">
-                                  <thead className="uppercase tracking-widest text-[#c9a45c]">
-                                    <tr>
-                                      <th className="p-2">Character</th>
-                                      <th className="p-2">Class</th>
-                                      <th className="p-2">Raid</th>
-                                      <th className="p-2">Date</th>
-                                      <th className="p-2">Event</th>
-                                      <th className="p-2">Notes</th>
-                                      <th className="p-2">DKP</th>
-                                      <th className="p-2">Actions</th>
-                                    </tr>
-                                  </thead>
-
-                                  <tbody>
-                                    {character.history.map((entry) => (
-                                      <tr
-                                        key={entry.id}
-                                        className="border-t border-[#33210d]"
-                                      >
-                                        <td className="p-2">
-                                          {entry.character_name}
-                                        </td>
-
-                                        <td className="p-2">
-                                          {entry.class_name}
-                                        </td>
-
-                                        <td className="p-2">
-                                          {entry.raid}
-                                        </td>
-
-                                        <td className="p-2">
-                                          {new Date(
-                                            entry.date
-                                          ).toLocaleDateString()}
-                                        </td>
-
-                                        <td className="p-2">
-                                          {entry.event}
-                                        </td>
-
-                                        <td className="p-2">
-                                          {entry.notes || "-"}
-                                        </td>
-
-                                        <td className="p-2 font-bold">
-                                          {entry.dkp > 0
-                                            ? `+${entry.dkp}`
-                                            : entry.dkp}
-                                        </td>
-
-                                        <td className="p-2">
-                                          <button
-                                            onClick={() =>
-                                              deleteEvent(entry.id)
-                                            }
-                                            className="border border-red-800 px-3 py-1 text-xs font-bold uppercase text-red-300 hover:bg-red-950"
-                                          >
-                                            Delete
-                                          </button>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              )}
-                            </td>
-                          </tr>
-                        )}
-                      </>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </tbody>
+            </table>
           )}
         </section>
       </section>
